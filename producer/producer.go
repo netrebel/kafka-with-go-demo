@@ -47,8 +47,8 @@ func createComment(c *fiber.Ctx) error {
 
 // PushCommentToQueue pushes commen to the topic
 func PushCommentToQueue(topic string, message []byte) error {
-	brokersURL := []string{"localhost:9092"}
-	fmt.Printf("connecting to: %v\n", brokersURL)
+	brokersURL := []string{"localhost:29092"}
+	fmt.Printf("Connecting to Kafka on: %v\n", brokersURL)
 	producer, err := ConnectProducer(brokersURL)
 	if err != nil {
 		fmt.Printf("Error connecting to producer: %v", err)
@@ -59,13 +59,13 @@ func PushCommentToQueue(topic string, message []byte) error {
 		Topic: topic,
 		Value: sarama.StringEncoder(message),
 	}
-	fmt.Printf("%+v\n", msg)
+	fmt.Printf("Message received: %+v\n", msg)
 	partition, offset, err := producer.SendMessage(msg)
 	if err != nil {
 		fmt.Printf("Error sending message to producer: %v", err)
 		return err
 	}
-	fmt.Printf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)
+	fmt.Printf("Message is stored in: topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)
 	return nil
 }
 
@@ -89,6 +89,8 @@ func main() {
 	api := app.Group("/api/v1") // /api
 
 	api.Post("/comments", createComment)
+
+	fmt.Println("Start sending messages to localhost:3000/api/v1/comments")
 
 	app.Listen(":3000")
 

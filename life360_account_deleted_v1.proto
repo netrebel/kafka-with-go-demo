@@ -1,0 +1,8 @@
+syntax="proto3";
+
+package main;
+
+message Life360AccountDeleted {
+    string userId = 1;
+    string reason = 2;
+  }

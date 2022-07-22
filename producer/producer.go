@@ -3,95 +3,99 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
 
-	"github.com/Shopify/sarama"
-	"github.com/gofiber/fiber/v2"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
+	proto "github.com/golang/protobuf/proto"
+	"github.com/gorilla/mux"
 )
 
-// Comment struct
-type Comment struct {
-	Text string `form:"text" json:"text"`
+func createMessage(w http.ResponseWriter, r *http.Request) {
+	// read body
+	data, _ := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+
+	log.Printf("INFO: JSON Request: %v", string(data))
+
+	// unmarshal and create docMsg
+	msg := &Life360AccountDeleted{}
+	err := json.Unmarshal(data, msg)
+	if err != nil {
+		log.Printf("ERROR: fail unmarshl: %s", err)
+		response(w, "Invalid request json", 400)
+	}
+
+	log.Printf("INFO: Life360AccountDeleted: %v", msg)
+
+	protoMsg, err := proto.Marshal(msg)
+	if err != nil {
+		log.Fatalln("Failed to proto encode doc:", err)
+	}
+
+	err = PushMessageToTopic("life360_account_deleted", protoMsg)
+	if err != nil {
+		http.Error(w, "Error pushing to topic", http.StatusInternalServerError)
+	}
+
 }
 
-func createComment(c *fiber.Ctx) error {
-	// Instantiate new Message struct
-	cmt := new(Comment)
-	if err := c.BodyParser(cmt); err != nil {
-		c.Status(400).JSON(&fiber.Map{
-			"success": false,
-			"message": err,
-		})
-		return err
-	}
-	// convert body into bytes and send it to kafka
-	cmtInBytes, err := json.Marshal(cmt)
-	if err != nil {
-		fmt.Printf("Error marshalling comment: %s", err)
-		return err
-	}
-
-	err = PushCommentToQueue("comments", cmtInBytes)
-	if err != nil {
-		c.Status(500).JSON(&fiber.Map{
-			"success": false,
-			"message": "Error creating comment",
-		})
-		return err
-	}
-	return c.JSON(fiber.Map{
-		"success": true,
-		"message": "Comment pushed successfully",
-		"comment": cmt,
-	})
+func response(w http.ResponseWriter, resp string, status int) {
+	w.WriteHeader(status)
+	w.Header().Set("Content-Type", "application/json")
+	io.WriteString(w, resp)
 }
 
-// PushCommentToQueue pushes commen to the topic
-func PushCommentToQueue(topic string, message []byte) error {
-	brokersURL := []string{"localhost:29092"}
+// PushMessageToTopic pushes commen to the topic
+func PushMessageToTopic(topic string, message []byte) error {
+	brokersURL := "192.168.64.26:32092"
 	fmt.Printf("Connecting to Kafka on: %v\n", brokersURL)
-	producer, err := ConnectProducer(brokersURL)
+	p, err := ConnectProducer(brokersURL)
 	if err != nil {
 		fmt.Printf("Error connecting to producer: %v", err)
 		return err
 	}
-	defer producer.Close()
-	msg := &sarama.ProducerMessage{
-		Topic: topic,
-		Value: sarama.StringEncoder(message),
-	}
-	fmt.Printf("Message received: %+v\n", msg)
-	partition, offset, err := producer.SendMessage(msg)
-	if err != nil {
-		fmt.Printf("Error sending message to producer: %v", err)
-		return err
-	}
-	fmt.Printf("Message is stored in: topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)
+	defer p.Close()
+	delivery_chan := make(chan kafka.Event, 10000)
+	err = p.Produce(&kafka.Message{
+		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+		Value:          message},
+		delivery_chan,
+	)
+	fmt.Println("Published message!")
 	return nil
 }
 
 // ConnectProducer connects to Kafka
-func ConnectProducer(brokersURL []string) (sarama.SyncProducer, error) {
-	config := sarama.NewConfig()
-	config.Producer.Return.Successes = true
-	config.Producer.RequiredAcks = sarama.WaitForAll
-	config.Producer.Retry.Max = 5
-	// NewSyncProducer creates a new SyncProducer using the given broker addresses and configuration.
-	conn, err := sarama.NewSyncProducer(brokersURL, config)
+func ConnectProducer(brokersURL string) (*kafka.Producer, error) {
+	p, err := kafka.NewProducer(&kafka.ConfigMap{
+		"bootstrap.servers": brokersURL,
+		"client.id":         "local",
+		"acks":              "all"})
+
 	if err != nil {
-		return nil, err
+		fmt.Printf("Failed to create producer: %s\n", err)
+		os.Exit(1)
 	}
-	return conn, nil
+	return p, nil
 }
 
 func main() {
 
-	app := fiber.New()
-	api := app.Group("/api/v1") // /api
+	// router
+	r := mux.NewRouter()
+	r.HandleFunc("/api/v1/account-delete", createMessage).Methods("POST")
 
-	api.Post("/comments", createComment)
+	log.Printf("Start sending messages to localhost:3000/api/v1/account-delete")
 
-	fmt.Println("Start sending messages to localhost:3000/api/v1/comments")
-
-	app.Listen(":3000")
+	// start server
+	err := http.ListenAndServe(":3000", r)
+	if err != nil {
+		fmt.Printf("ERROR: fail init http server, %s", err)
+		os.Exit(1)
+	}
 
 }

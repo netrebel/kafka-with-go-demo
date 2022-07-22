@@ -23,8 +23,8 @@ func connectConsumer(brokersURL []string) (sarama.Consumer, error) {
 }
 
 func main() {
-	topic := "comments"
-	worker, err := connectConsumer([]string{"localhost:29092"})
+	topic := "life360_account_deleted"
+	worker, err := connectConsumer([]string{"192.168.64.26:32092"})
 
 	if err != nil {
 		panic(err)

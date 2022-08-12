@@ -69,6 +69,7 @@ func PushMessageToTopic(topic string, message []byte) error {
 		panic("Could not produce message")
 	}
 	fmt.Println("Published message!")
+	p.Flush(100)
 	return nil
 }
 

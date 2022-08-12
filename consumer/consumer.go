@@ -3,28 +3,27 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
-	"github.com/Shopify/sarama"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
-func connectConsumer(brokersURL []string) (sarama.Consumer, error) {
-	config := sarama.NewConfig()
-	config.Consumer.Return.Errors = true
+func connectConsumer(brokersURL string) (*kafka.Consumer, error) {
+	p, err := kafka.NewConsumer(&kafka.ConfigMap{
+		"bootstrap.servers":               brokersURL,
+		"group.id":                        "foo",
+		"go.application.rebalance.enable": true})
 
-	// Create new consumer
-	conn, err := sarama.NewConsumer(brokersURL, config)
 	if err != nil {
-		return nil, err
+		fmt.Printf("Failed to create consumer: %s\n", err)
+		os.Exit(1)
 	}
-
-	return conn, nil
+	fmt.Printf("Created consumer on %v\n", brokersURL)
+	return p, nil
 }
 
 func main() {
 	topic := "life360_account_deleted"
-	worker, err := connectConsumer([]string{"192.168.64.26:32092"})
+	consumer, err := connectConsumer("192.168.64.26:32092")
 
 	if err != nil {
 		panic(err)
@@ -32,39 +31,29 @@ func main() {
 
 	// Calling ConsumePartition. It will open one connection per broker
 	// and share it for all partitions that live on it.
-	consumer, err := worker.ConsumePartition(topic, 0, sarama.OffsetOldest)
+	err = consumer.Subscribe(topic, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("consumer started...")
-	sigchan := make(chan os.Signal, 1)
-	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
-	// Count how many message processed
-	msgCount := 0
+	fmt.Printf("Subscibed to topic %v\n", topic)
 
-	// Get signal for finish
-	doneCh := make(chan struct{})
-
-	go func() {
-		for {
-			select {
-			case err := <-consumer.Errors():
-				fmt.Println(err)
-			case msg := <-consumer.Messages():
-				msgCount++
-				fmt.Printf("Received message Count %d: | Topic(%s) | Message(%s) \n", msgCount, string(msg.Topic), string(msg.Value))
-			case <-sigchan:
-				fmt.Println("Interrupt detected")
-				doneCh <- struct{}{}
-			}
+	run := true
+	for run == true {
+		ev := consumer.Poll(10)
+		switch e := ev.(type) {
+		case *kafka.Message:
+			fmt.Printf("%% Message on %s:\n%s\n", e.TopicPartition, string(e.Value))
+		case kafka.PartitionEOF:
+			fmt.Printf("%% Reached %v\n", e)
+		case kafka.Error:
+			fmt.Fprintf(os.Stderr, "%% Error: %v\n", e)
+			run = false
+		default:
+			// fmt.Printf("Ignored %v\n", e)
+			// run = false
 		}
-	}()
-
-	<-doneCh
-	fmt.Println("Processed", msgCount, "messages")
-
-	if err := worker.Close(); err != nil {
-		panic(err)
 	}
+
+	consumer.Close()
 }

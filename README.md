@@ -18,8 +18,9 @@ https://medium.com/swlh/apache-kafka-with-golang-227f9f2eb818
 brew install protobuf
 
 # install go protobuf 
-go get github.com/golang/protobuf
-go get github.com/golang/protobuf/protoc-gen-go
+go get google.golang.org/protobuf
+
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 
 # complie protobuf
 protoc *.proto --go_out=producer

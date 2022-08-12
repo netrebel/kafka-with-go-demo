@@ -10,8 +10,8 @@ import (
 	"os"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	proto "github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
+	proto "google.golang.org/protobuf/proto"
 )
 
 func createMessage(w http.ResponseWriter, r *http.Request) {
@@ -65,6 +65,9 @@ func PushMessageToTopic(topic string, message []byte) error {
 		Value:          message},
 		delivery_chan,
 	)
+	if err != nil {
+		panic("Could not produce message")
+	}
 	fmt.Println("Published message!")
 	return nil
 }

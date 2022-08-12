@@ -68,7 +68,7 @@ func PushMessageToTopic(topic string, message []byte) error {
 	if err != nil {
 		panic("Could not produce message")
 	}
-	fmt.Println("Published message!")
+	fmt.Printf("Published message to topic %v\n", topic)
 	p.Flush(100)
 	return nil
 }

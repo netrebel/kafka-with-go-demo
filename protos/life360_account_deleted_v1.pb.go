@@ -4,7 +4,7 @@
 // 	protoc        v3.21.5
 // source: life360_account_deleted_v1.proto
 
-package main
+package protos
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

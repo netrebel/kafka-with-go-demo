@@ -11,6 +11,7 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/gorilla/mux"
+	"github.com/netrebel/kafka-with-go/protos"
 	proto "google.golang.org/protobuf/proto"
 )
 
@@ -22,7 +23,7 @@ func createMessage(w http.ResponseWriter, r *http.Request) {
 	log.Printf("INFO: JSON Request: %v", string(data))
 
 	// unmarshal and create docMsg
-	msg := &Life360AccountDeleted{}
+	msg := &protos.Life360AccountDeleted{}
 	err := json.Unmarshal(data, msg)
 	if err != nil {
 		log.Printf("ERROR: fail unmarshl: %s", err)

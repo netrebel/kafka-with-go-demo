@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/netrebel/kafka-with-go/protos"
+	"google.golang.org/protobuf/proto"
 )
 
 func connectConsumer(brokersURL string) (*kafka.Consumer, error) {
@@ -43,9 +45,14 @@ func main() {
 		ev := consumer.Poll(10)
 		switch e := ev.(type) {
 		case *kafka.Message:
-			fmt.Printf("%% Message on %s:\n%s\n", e.TopicPartition, string(e.Value))
+			msg := &protos.Life360AccountDeleted{}
+			err = proto.Unmarshal(e.Value, msg)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Printf("Message on %v: %v\n", e.TopicPartition, msg)
 		case kafka.PartitionEOF:
-			fmt.Printf("%% Reached %v\n", e)
+			fmt.Printf("Reached %v\n", e)
 		case kafka.Error:
 			fmt.Fprintf(os.Stderr, "%% Error: %v\n", e)
 			run = false

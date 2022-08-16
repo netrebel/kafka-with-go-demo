@@ -41,7 +41,7 @@ func main() {
 	fmt.Printf("Subscibed to topic: %v\n", topic)
 
 	run := true
-	for run == true {
+	for run {
 		ev := consumer.Poll(10)
 		switch e := ev.(type) {
 		case *kafka.Message:

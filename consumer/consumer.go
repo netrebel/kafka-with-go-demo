@@ -38,7 +38,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Subscibed to topic %v\n", topic)
+	fmt.Printf("Subscibed to topic: %v\n", topic)
 
 	run := true
 	for run == true {

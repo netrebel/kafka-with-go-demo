@@ -1,8 +1,8 @@
 .PHONY: build clean producer consumer
 
 build:
-	cd consumer; go build -o ../bin/consumer .
-	cd producer; go build -o ../bin/producer .
+	go build -o bin/consumer consumer/*.go
+	go build -o bin/producer producer/*.go
 
 producer:
 	bin/producer

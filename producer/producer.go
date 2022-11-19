@@ -52,7 +52,7 @@ func response(w http.ResponseWriter, resp string, status int) {
 
 // PushMessageToTopic pushes commen to the topic
 func PushMessageToTopic(topic string, message []byte) error {
-	brokersURL := "192.168.64.26:32092"
+	brokersURL := "localhost:32092"
 	fmt.Printf("Connecting to Kafka on: %v\n", brokersURL)
 	p, err := ConnectProducer(brokersURL)
 	if err != nil {
@@ -70,7 +70,7 @@ func PushMessageToTopic(topic string, message []byte) error {
 		panic("Could not produce message")
 	}
 	fmt.Printf("Published message to topic %v\n", topic)
-	p.Flush(100)
+	p.Flush(1000)
 	return nil
 }
 

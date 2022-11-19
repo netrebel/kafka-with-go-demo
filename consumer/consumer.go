@@ -25,7 +25,7 @@ func connectConsumer(brokersURL string) (*kafka.Consumer, error) {
 
 func main() {
 	topic := "life360_account_deleted"
-	consumer, err := connectConsumer("192.168.64.26:32092")
+	consumer, err := connectConsumer("localhost:32092")
 
 	if err != nil {
 		panic(err)

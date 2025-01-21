@@ -11,7 +11,7 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/gorilla/mux"
-	"github.com/netrebel/kafka-with-go/protos"
+	"github.com/life360/kafka-with-go-demo/protos"
 	proto "google.golang.org/protobuf/proto"
 )
 
@@ -60,6 +60,7 @@ func PushMessageToTopic(topic string, message []byte) error {
 		return err
 	}
 	defer p.Close()
+
 	delivery_chan := make(chan kafka.Event, 10000)
 	err = p.Produce(&kafka.Message{
 		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},

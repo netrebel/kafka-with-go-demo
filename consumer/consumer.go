@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"github.com/netrebel/kafka-with-go/protos"
+	"github.com/life360/kafka-with-go-demo/protos"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -46,9 +46,10 @@ func main() {
 		switch e := ev.(type) {
 		case *kafka.Message:
 			msg := &protos.Life360AccountDeleted{}
+			fmt.Printf("Message value: %v\n", string(e.Value))
 			err = proto.Unmarshal(e.Value, msg)
 			if err != nil {
-				panic(err)
+				fmt.Println(err)
 			}
 			fmt.Printf("Message on %v: %v\n", e.TopicPartition, msg)
 		case kafka.PartitionEOF:

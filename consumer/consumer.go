@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/life360/kafka-with-go-demo/config"
 	"github.com/life360/kafka-with-go-demo/protos"
 	"google.golang.org/protobuf/proto"
 )
@@ -24,8 +25,9 @@ func connectConsumer(brokersURL string) (*kafka.Consumer, error) {
 }
 
 func main() {
-	topic := "life360_account_deleted"
-	consumer, err := connectConsumer("localhost:32092")
+	config.LoadEnv()
+	topic := os.Getenv("TOPIC")
+	consumer, err := connectConsumer(os.Getenv("bootstrap.servers"))
 
 	if err != nil {
 		panic(err)
@@ -46,7 +48,6 @@ func main() {
 		switch e := ev.(type) {
 		case *kafka.Message:
 			msg := &protos.Life360AccountDeleted{}
-			fmt.Printf("Message value: %v\n", string(e.Value))
 			err = proto.Unmarshal(e.Value, msg)
 			if err != nil {
 				fmt.Println(err)

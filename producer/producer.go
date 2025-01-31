@@ -4,27 +4,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/gorilla/mux"
+	"github.com/life360/kafka-with-go-demo/config"
 	"github.com/life360/kafka-with-go-demo/protos"
 	proto "google.golang.org/protobuf/proto"
 )
 
 func createMessage(w http.ResponseWriter, r *http.Request) {
 	// read body
-	data, _ := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("ERROR: fail to read request body: %s", err)
+		response(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
 	defer r.Body.Close()
 
 	log.Printf("INFO: JSON Request: %v", string(data))
 
 	// unmarshal and create docMsg
 	msg := &protos.Life360AccountDeleted{}
-	err := json.Unmarshal(data, msg)
+	err = json.Unmarshal(data, msg)
 	if err != nil {
 		log.Printf("ERROR: fail unmarshl: %s", err)
 		response(w, "Invalid request json", 400)
@@ -37,9 +42,12 @@ func createMessage(w http.ResponseWriter, r *http.Request) {
 		log.Fatalln("Failed to proto encode doc:", err)
 	}
 
-	err = PushMessageToTopic("life360_account_deleted", protoMsg)
+	topic := os.Getenv("TOPIC")
+	err = PushMessageToTopic(topic, protoMsg)
 	if err != nil {
 		http.Error(w, "Error pushing to topic", http.StatusInternalServerError)
+	} else {
+		fmt.Printf("Published message to topic %v\n", topic)
 	}
 
 }
@@ -52,11 +60,11 @@ func response(w http.ResponseWriter, resp string, status int) {
 
 // PushMessageToTopic pushes commen to the topic
 func PushMessageToTopic(topic string, message []byte) error {
-	brokersURL := "localhost:32092"
+	brokersURL := os.Getenv("bootstrap.servers")
 	fmt.Printf("Connecting to Kafka on: %v\n", brokersURL)
 	p, err := ConnectProducer(brokersURL)
 	if err != nil {
-		fmt.Printf("Error connecting to producer: %v", err)
+		fmt.Printf("Error connecting producer: %v", err)
 		return err
 	}
 	defer p.Close()
@@ -70,7 +78,6 @@ func PushMessageToTopic(topic string, message []byte) error {
 	if err != nil {
 		panic("Could not produce message")
 	}
-	fmt.Printf("Published message to topic %v\n", topic)
 	p.Flush(1000)
 	return nil
 }
@@ -94,6 +101,7 @@ func main() {
 	// router
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/account-delete", createMessage).Methods("POST")
+	config.LoadEnv()
 
 	log.Printf("Start sending messages to localhost:3000/api/v1/account-delete")
 

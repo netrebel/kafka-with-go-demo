@@ -4,30 +4,49 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/life360/kafka-with-go-demo/config"
 	"github.com/life360/kafka-with-go-demo/protos"
 	"google.golang.org/protobuf/proto"
 )
 
-func connectConsumer(brokersURL string) (*kafka.Consumer, error) {
-	p, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":               brokersURL,
-		"group.id":                        "foo",
-		"go.application.rebalance.enable": true})
+func connectConsumer() (*kafka.Consumer, error) {
+	fmt.Printf("Connecting to Kafka on: %v\n", os.Getenv("bootstrap.servers"))
+
+	config := kafka.ConfigMap{
+		"bootstrap.servers":               os.Getenv("bootstrap.servers"),
+		"group.id":                        "go-group-1",
+		"auto.offset.reset":               "latest",
+		"session.timeout.ms":              45000, // Best practice for higher availability in librdkafka clients prior to 1.7
+		"go.application.rebalance.enable": true,
+		"client.id":                       "ccloud-go-client-2f0d4f57-0582-4c6d-8442-24513c4f715a",
+	}
+
+	if os.Getenv("sasl.username") != "" && os.Getenv("sasl.password") != "" {
+		config["security.protocol"] = "SASL_SSL"
+		config["sasl.mechanisms"] = "PLAIN"
+		config["sasl.username"] = os.Getenv("sasl.username")
+		config["sasl.password"] = os.Getenv("sasl.password")
+	}
+
+	p, err := kafka.NewConsumer(&config)
 
 	if err != nil {
 		fmt.Printf("Failed to create consumer: %s\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("Created consumer on %v\n", brokersURL)
 	return p, nil
 }
 
 func main() {
 	config.LoadEnv()
-	topic := os.Getenv("TOPIC")
-	consumer, err := connectConsumer(os.Getenv("bootstrap.servers"))
+
+	topic := os.Getenv("env.topic")
+	if topic == "" {
+		panic("env.topic not set")
+	}
+
+	consumer, err := connectConsumer()
 
 	if err != nil {
 		panic(err)

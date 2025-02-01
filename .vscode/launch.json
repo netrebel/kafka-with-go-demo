@@ -11,7 +11,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/producer",
             "env": {
-                "ENV": "",
+                "ENV": "confluent",
             }
         },
         {
@@ -21,7 +21,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/consumer",
             "env": {
-                "ENV": "",
+                "ENV": "confluent",
             }
         }
     ]

@@ -9,18 +9,22 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// LoadEnv loads the environment variables from the .env-[ENV] or .env file
+// and returns a kafka.ConfigMap with the client configuration
 func LoadEnv() {
 	// Load environment variables
 	env := os.Getenv("ENV")
-	if env != "" {
-		fmt.Printf("Loading ENV variables from: .env.%v\n", env)
-	}
 
 	_, filename, _, _ := runtime.Caller(0)
 	currentDir := filepath.Dir(filename)
 
-	// First load the environment specific file, it takes precedence over the original .env file
-	godotenv.Load(fmt.Sprintf("%v/.env.%v", currentDir, env))
-	// Load the original .env file
-	godotenv.Load(fmt.Sprintf("%v/.env", currentDir))
+	configFilePath := ""
+	if env != "" {
+		configFilePath = fmt.Sprintf("%v/config-%v.properties", currentDir, env)
+	} else {
+		configFilePath = fmt.Sprintf("%v/config.properties", currentDir)
+	}
+	fmt.Printf("Loading ENV variables from: %v\n", configFilePath)
+	// Loading Topic mainly
+	godotenv.Load(configFilePath)
 }

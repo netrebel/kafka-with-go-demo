@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/gorilla/mux"
 	"github.com/life360/kafka-with-go-demo/config"
 	"github.com/life360/kafka-with-go-demo/protos"
@@ -42,7 +42,11 @@ func createMessage(w http.ResponseWriter, r *http.Request) {
 		log.Fatalln("Failed to proto encode doc:", err)
 	}
 
-	topic := os.Getenv("TOPIC")
+	topic := os.Getenv("env.topic")
+	if topic == "" {
+		panic("env.topic not set")
+	}
+
 	err = PushMessageToTopic(topic, protoMsg)
 	if err != nil {
 		http.Error(w, "Error pushing to topic", http.StatusInternalServerError)
@@ -60,9 +64,7 @@ func response(w http.ResponseWriter, resp string, status int) {
 
 // PushMessageToTopic pushes commen to the topic
 func PushMessageToTopic(topic string, message []byte) error {
-	brokersURL := os.Getenv("bootstrap.servers")
-	fmt.Printf("Connecting to Kafka on: %v\n", brokersURL)
-	p, err := ConnectProducer(brokersURL)
+	p, err := ConnectProducer()
 	if err != nil {
 		fmt.Printf("Error connecting producer: %v", err)
 		return err
@@ -83,11 +85,21 @@ func PushMessageToTopic(topic string, message []byte) error {
 }
 
 // ConnectProducer connects to Kafka
-func ConnectProducer(brokersURL string) (*kafka.Producer, error) {
-	p, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": brokersURL,
-		"client.id":         "local",
-		"acks":              "all"})
+func ConnectProducer() (*kafka.Producer, error) {
+	fmt.Printf("Connecting to Kafka on: %v\n", os.Getenv("bootstrap.servers"))
+
+	config := kafka.ConfigMap{
+		"bootstrap.servers": os.Getenv("bootstrap.servers"),
+		"client.id":         "ccloud-go-client-2f0d4f57-0582-4c6d-8442-24513c4f715a",
+		"acks":              "all",
+	}
+	if os.Getenv("sasl.username") != "" && os.Getenv("sasl.password") != "" {
+		config["security.protocol"] = "SASL_SSL"
+		config["sasl.mechanisms"] = "PLAIN"
+		config["sasl.username"] = os.Getenv("sasl.username")
+		config["sasl.password"] = os.Getenv("sasl.password")
+	}
+	p, err := kafka.NewProducer(&config)
 
 	if err != nil {
 		fmt.Printf("Failed to create producer: %s\n", err)

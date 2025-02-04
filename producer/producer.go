@@ -80,7 +80,7 @@ func PushMessageToTopic(topic string, message []byte) error {
 	if err != nil {
 		panic("Could not produce message")
 	}
-	p.Flush(1000)
+	p.Flush(5000)
 	return nil
 }
 

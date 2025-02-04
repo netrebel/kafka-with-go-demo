@@ -19,7 +19,7 @@ func connectConsumer() (*kafka.Consumer, error) {
 		"auto.offset.reset":               "latest",
 		"session.timeout.ms":              45000, // Best practice for higher availability in librdkafka clients prior to 1.7
 		"go.application.rebalance.enable": true,
-		"client.id":                       "ccloud-go-client-2f0d4f57-0582-4c6d-8442-24513c4f715a",
+		"client.id":                       "ccloud-go-client-local",
 	}
 
 	if os.Getenv("sasl.username") != "" && os.Getenv("sasl.password") != "" {

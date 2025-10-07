@@ -10,12 +10,32 @@ Reference: https://medium.com/swlh/apache-kafka-with-golang-227f9f2eb818
 
 Kafka running on `localhost:32092`
 
-## How to run
+## How to run with minikube
+
+1. `make build` to build binaries
+2. `make deps-up` to run kafka
+3. `make producer` to run the producer (starts HTTP server)
+4. `make consumer` to run the consumer
+5. `make test` to send a message to the producer
+
+## How to run with docker-compose
 
 1. `make deps-up` to run kafka
-2. `make producer` to run the producer (starts HTTP server)
-3. `make consumer` to run the consumer
+2. `make producer-docker` to run the producer (starts HTTP server)
+3. `make consumer-docker` to run the consumer
 4. `make test` to send a message to the producer
+
+## How to run with confluent
+
+Update `config/config-confluent.properties` with real values. Go to https://confluent.cloud/settings/api-keys/create to create API keys:
+- `bootstrap.servers` is the URL of your Kafka cluster
+- `sasl.username` is your API key
+- `sasl.password` is your API secret
+
+1. `make producer-confluent` to run the producer (starts HTTP server)
+2. `make consumer-confluent` to run the consumer
+3. `make test` to send a message to the producer
+
 
 ## Protobuf setup
 
@@ -33,12 +53,5 @@ go get google.golang.org/protobuf
 protoc *.proto --go_out=.
 ```
 
-## M1 port-forward
-
-Shouldn't be needed anymore.
-
-```
-kubectl port-forward service/life360-kafka 32092:9092
-```
 ## Links:
 - https://github.com/confluentinc/demo-scene/blob/master/getting-started-with-ccloud-golang/ClientApp.go
